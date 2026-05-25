@@ -67,11 +67,12 @@ export default function Home() {
 
       <main className="question-card">
         <Image
-          src="/background-icons/20241114_104303_399669____1_____1200x1200-removebg-preview.png"
+          src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3ZxODUxN2lhNTJkM2VkazZ2Nm1yemUxaWc4b3J1bXZ4Nzh5azk2cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/otC3E9VpgzSdEDUglZ/giphy.gif"
           alt="Character icon"
           width={78}
           height={78}
           className="avatar"
+          unoptimized
           priority
         />
 
