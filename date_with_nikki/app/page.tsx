@@ -36,6 +36,8 @@ const questionQueue = [
 type QuestionKey = (typeof questionQueue)[number]["key"];
 type Answers = Record<QuestionKey, string>;
 
+type SmsState = "idle" | "sending" | "success" | "error";
+
 export default function Home() {
   const backgroundIconPool = [
     "/background-icons/20241114_104303_399669____1_____1200x1200-removebg-preview.png",
@@ -72,6 +74,9 @@ export default function Home() {
     activity: "",
     where: "",
   });
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [smsState, setSmsState] = useState<SmsState>("idle");
+  const [smsMessage, setSmsMessage] = useState("");
 
   const moveNoButton = useCallback(() => {
     const zone = playZoneRef.current;
@@ -102,6 +107,39 @@ export default function Home() {
     }
 
     setCurrentStep((prev) => prev + 1);
+  };
+
+  const handleSendSms = async () => {
+    if (!phoneNumber.trim()) {
+      setSmsState("error");
+      setSmsMessage("Please enter a phone number first.");
+      return;
+    }
+
+    setSmsState("sending");
+    setSmsMessage("Sending confirmation text...");
+
+    const response = await fetch("/api/send-sms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phoneNumber,
+        details: answers,
+      }),
+    });
+
+    const result = (await response.json()) as { message?: string; error?: string };
+
+    if (!response.ok) {
+      setSmsState("error");
+      setSmsMessage(result.error ?? "Unable to send the text message.");
+      return;
+    }
+
+    setSmsState("success");
+    setSmsMessage(result.message ?? "Confirmation text sent.");
   };
 
   return (
@@ -190,6 +228,41 @@ export default function Home() {
               {currentStep === questionQueue.length - 1 ? "Finish" : "Next"}
             </button>
           </div>
+        </main>
+      ) : currentStep === questionQueue.length ? (
+        <main className="question-card flow-card sms-card">
+          <p className="flow-progress">Final step</p>
+          <h2 className="flow-question">Send a confirmation text</h2>
+          <p className="flow-copy">
+            Enter your phone number and I’ll text you the date confirmation with
+            the details you chose.
+          </p>
+          <input
+            type="tel"
+            className="flow-input"
+            placeholder="Phone number with country code"
+            value={phoneNumber}
+            onChange={(event) => setPhoneNumber(event.target.value)}
+          />
+          <div className="flow-summary">
+            <span>When: {answers.when}</span>
+            <span>Time: {answers.time}</span>
+            <span>Activity: {answers.activity}</span>
+            <span>Where: {answers.where}</span>
+          </div>
+          <div className="flow-actions">
+            <button
+              type="button"
+              className="flow-button"
+              onClick={handleSendSms}
+              disabled={smsState === "sending"}
+            >
+              {smsState === "sending" ? "Sending..." : "Send text"}
+            </button>
+          </div>
+          <p className={`result ${smsState !== "idle" ? "result--show" : ""}`}>
+            {smsMessage}
+          </p>
         </main>
       ) : (
         <main className="question-card flow-card">

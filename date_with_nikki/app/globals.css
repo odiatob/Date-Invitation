@@ -161,6 +161,10 @@ body {
   gap: 0.7rem;
 }
 
+.sms-card {
+  gap: 0.8rem;
+}
+
 .flow-progress {
   margin: 0;
   font-size: 0.83rem;
@@ -189,6 +193,26 @@ body {
 .flow-input:focus {
   outline: 2px solid rgba(243, 154, 196, 0.35);
   outline-offset: 1px;
+}
+
+.flow-copy {
+  margin: 0;
+  max-width: 28ch;
+  line-height: 1.55;
+  font-size: 0.96rem;
+}
+
+.flow-summary {
+  display: grid;
+  gap: 0.35rem;
+  width: min(100%, 24rem);
+  padding: 0.9rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(208, 170, 196, 0.34);
+  background: rgba(255, 249, 252, 0.9);
+  color: rgba(125, 50, 88, 0.88);
+  font-size: 0.9rem;
+  text-align: left;
 }
 
 .flow-actions {
