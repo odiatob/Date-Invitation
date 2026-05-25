@@ -6,6 +6,36 @@ import { useCallback, useRef, useState } from "react";
 const NO_BUTTON_WIDTH = 84;
 const NO_BUTTON_HEIGHT = 42;
 
+const questionQueue = [
+  {
+    key: "when",
+    label: "When should we go?",
+    placeholder: "Friday, Saturday, or Sunday",
+    inputType: "text",
+  },
+  {
+    key: "time",
+    label: "What time works best?",
+    placeholder: "Around 6:30 PM",
+    inputType: "text",
+  },
+  {
+    key: "activity",
+    label: "What activity do you want?",
+    placeholder: "Dinner, arcade, coffee, movie...",
+    inputType: "text",
+  },
+  {
+    key: "where",
+    label: "Where should we go?",
+    placeholder: "Pick your favorite place",
+    inputType: "text",
+  },
+] as const;
+
+type QuestionKey = (typeof questionQueue)[number]["key"];
+type Answers = Record<QuestionKey, string>;
+
 export default function Home() {
   const backgroundIconPool = [
     "/background-icons/20241114_104303_399669____1_____1200x1200-removebg-preview.png",
@@ -35,7 +65,13 @@ export default function Home() {
 
   const playZoneRef = useRef<HTMLDivElement>(null);
   const [noPosition, setNoPosition] = useState({ x: 232, y: 6 });
-  const [accepted, setAccepted] = useState(false);
+  const [currentStep, setCurrentStep] = useState(-1);
+  const [answers, setAnswers] = useState<Answers>({
+    when: "",
+    time: "",
+    activity: "",
+    where: "",
+  });
 
   const moveNoButton = useCallback(() => {
     const zone = playZoneRef.current;
@@ -55,6 +91,19 @@ export default function Home() {
     });
   }, []);
 
+  const activeQuestion =
+    currentStep >= 0 && currentStep < questionQueue.length
+      ? questionQueue[currentStep]
+      : null;
+
+  const handleNextStep = () => {
+    if (!activeQuestion) {
+      return;
+    }
+
+    setCurrentStep((prev) => prev + 1);
+  };
+
   return (
     <div className="scene">
       <div className="background-field" aria-hidden="true">
@@ -65,42 +114,92 @@ export default function Home() {
         ))}
       </div>
 
-      <main className="question-card">
-        <Image
-          src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3ZxODUxN2lhNTJkM2VkazZ2Nm1yemUxaWc4b3J1bXZ4Nzh5azk2cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/otC3E9VpgzSdEDUglZ/giphy.gif"
-          alt="Character icon"
-          width={78}
-          height={78}
-          className="avatar"
-          unoptimized
-          priority
-        />
+      {currentStep === -1 ? (
+        <main className="question-card">
+          <Image
+            src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3ZxODUxN2lhNTJkM2VkazZ2Nm1yemUxaWc4b3J1bXZ4Nzh5azk2cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/otC3E9VpgzSdEDUglZ/giphy.gif"
+            alt="Character icon"
+            width={78}
+            height={78}
+            className="avatar"
+            unoptimized
+            priority
+          />
 
-        <h1 className="question">❀ Will you go on a date with me? ❀</h1>
+          <h1 className="question">❀ Will you go on a date with me? ❀</h1>
 
-        <div className="button-zone" ref={playZoneRef}>
-          <button type="button" className="yes-button" onClick={() => setAccepted(true)}>
-            YES 💞
-          </button>
+          <div className="button-zone" ref={playZoneRef}>
+            <button
+              type="button"
+              className="yes-button"
+              onClick={() => setCurrentStep(0)}
+            >
+              YES 💞
+            </button>
 
-          <button
-            type="button"
-            className="no-button"
-            style={{ left: `${noPosition.x}px`, top: `${noPosition.y}px` }}
-            onMouseEnter={moveNoButton}
-            onFocus={moveNoButton}
-            onTouchStart={moveNoButton}
-            onClick={(event) => {
-              event.preventDefault();
-              moveNoButton();
-            }}
-          >
-            no ..
-          </button>
-        </div>
-
-        <p className={`result ${accepted ? "result--show" : ""}`}>Yay, see you soon 💗</p>
-      </main>
+            <button
+              type="button"
+              className="no-button"
+              style={{ left: `${noPosition.x}px`, top: `${noPosition.y}px` }}
+              onMouseEnter={moveNoButton}
+              onFocus={moveNoButton}
+              onTouchStart={moveNoButton}
+              onClick={(event) => {
+                event.preventDefault();
+                moveNoButton();
+              }}
+            >
+              no ..
+            </button>
+          </div>
+        </main>
+      ) : currentStep < questionQueue.length && activeQuestion ? (
+        <main className="question-card flow-card">
+          <p className="flow-progress">
+            Question {currentStep + 1} of {questionQueue.length}
+          </p>
+          <h2 className="flow-question">{activeQuestion.label}</h2>
+          <input
+            type={activeQuestion.inputType}
+            className="flow-input"
+            placeholder={activeQuestion.placeholder}
+            value={answers[activeQuestion.key]}
+            onChange={(event) =>
+              setAnswers((prev) => ({
+                ...prev,
+                [activeQuestion.key]: event.target.value,
+              }))
+            }
+          />
+          <div className="flow-actions">
+            {currentStep > 0 ? (
+              <button
+                type="button"
+                className="flow-button flow-button--ghost"
+                onClick={() => setCurrentStep((prev) => prev - 1)}
+              >
+                Back
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="flow-button"
+              onClick={handleNextStep}
+              disabled={!answers[activeQuestion.key].trim()}
+            >
+              {currentStep === questionQueue.length - 1 ? "Finish" : "Next"}
+            </button>
+          </div>
+        </main>
+      ) : (
+        <main className="question-card flow-card">
+          <h2 className="flow-question">Perfect, see you soon 💗</h2>
+          <p className="result result--show">
+            When: {answers.when} · Time: {answers.time} · Activity: {answers.activity} ·
+            Where: {answers.where}
+          </p>
+        </main>
+      )}
     </div>
   );
 }
