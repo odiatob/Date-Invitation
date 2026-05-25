@@ -1,23 +1,28 @@
+"use client";
+
 import Image from "next/image";
+import { useCallback, useRef, useState } from "react";
+
+const NO_BUTTON_WIDTH = 84;
+const NO_BUTTON_HEIGHT = 42;
 
 export default function Home() {
-  const nyotaIconPool = [
+  const backgroundIconPool = [
     "/background-icons/20241114_104303_399669____1_____1200x1200-removebg-preview.png",
     "/background-icons/71e0jHKq6AL._AC_UF350_350_QL80_-removebg-preview.png",
     "/background-icons/what-is-crybaby-crybunny-cryteddy-singapore-where-to-buy-removebg-preview.png",
   ];
 
-  const nyota = Array.from({ length: 26 }, (_, index) => {
+  const figures = Array.from({ length: 26 }, (_, index) => {
     const size = (26 + ((index * 9) % 30)) * 5;
     const top = (index * 29) % 100;
     const left = (index * 17 + 11) % 100;
     const delay = ((index % 6) * 0.35).toFixed(2);
     const duration = (5 + (index % 5) * 1.25).toFixed(2);
-    const icon = nyotaIconPool[index % nyotaIconPool.length];
 
     return {
       id: index,
-      icon,
+      icon: backgroundIconPool[index % backgroundIconPool.length],
       style: {
         "--figure-size": `${size}px`,
         "--figure-top": `${top}%`,
@@ -28,46 +33,72 @@ export default function Home() {
     };
   });
 
+  const playZoneRef = useRef<HTMLDivElement>(null);
+  const [noPosition, setNoPosition] = useState({ x: 232, y: 6 });
+  const [accepted, setAccepted] = useState(false);
+
+  const moveNoButton = useCallback(() => {
+    const zone = playZoneRef.current;
+    if (!zone) {
+      return;
+    }
+
+    const horizontalLimit = Math.max(
+      0,
+      zone.clientWidth - NO_BUTTON_WIDTH - 10,
+    );
+    const verticalLimit = Math.max(0, zone.clientHeight - NO_BUTTON_HEIGHT - 6);
+
+    setNoPosition({
+      x: Math.floor(Math.random() * (horizontalLimit + 1)),
+      y: Math.floor(Math.random() * (verticalLimit + 1)),
+    });
+  }, []);
+
   return (
-    <div className="page-wrap">
-      <div className="nyota-field" aria-hidden="true">
-        {nyota.map((figure) => (
-          <span key={figure.id} className="nyota-figure" style={figure.style}>
+    <div className="scene">
+      <div className="background-field" aria-hidden="true">
+        {figures.map((figure) => (
+          <span key={figure.id} className="background-figure" style={figure.style}>
             <Image src={figure.icon} alt="" width={96} height={96} />
           </span>
         ))}
       </div>
 
-      <main className="invite-card">
-        <p className="eyebrow">Date Invitation</p>
-        <h1 className="headline">Sunset with Nikki</h1>
-        <p className="lead">
-          A golden evening plan with warm lights, a sweet playlist, and quiet
-          stargazing after dinner.
-        </p>
+      <main className="question-card">
+        <Image
+          src="/background-icons/20241114_104303_399669____1_____1200x1200-removebg-preview.png"
+          alt="Character icon"
+          width={78}
+          height={78}
+          className="avatar"
+          priority
+        />
 
-        <section className="details-grid" aria-label="Invitation details">
-          <div className="detail-block">
-            <h2>When</h2>
-            <p>Friday, May 29 · 6:30 PM</p>
-          </div>
-          <div className="detail-block">
-            <h2>Where</h2>
-            <p>Rooftop Garden, West View</p>
-          </div>
-          <div className="detail-block">
-            <h2>Theme</h2>
-            <p>Yellow tones, Baby Three + Cry Baby mood, cozy sparkle</p>
-          </div>
-          <div className="detail-block">
-            <h2>Dress Code</h2>
-            <p>Anything cozy with a hint of gold</p>
-          </div>
-        </section>
+        <h1 className="question">❀ Will you go on a date with me? ❀</h1>
 
-        <button type="button" className="rsvp-button">
-          RSVP
-        </button>
+        <div className="button-zone" ref={playZoneRef}>
+          <button type="button" className="yes-button" onClick={() => setAccepted(true)}>
+            YES 💞
+          </button>
+
+          <button
+            type="button"
+            className="no-button"
+            style={{ left: `${noPosition.x}px`, top: `${noPosition.y}px` }}
+            onMouseEnter={moveNoButton}
+            onFocus={moveNoButton}
+            onTouchStart={moveNoButton}
+            onClick={(event) => {
+              event.preventDefault();
+              moveNoButton();
+            }}
+          >
+            no ..
+          </button>
+        </div>
+
+        <p className={`result ${accepted ? "result--show" : ""}`}>Yay, see you soon 💗</p>
       </main>
     </div>
   );
