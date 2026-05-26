@@ -181,48 +181,45 @@ export default function Home() {
 
     try {
       // send to the recipient
-      await emailjs.send(
-        serviceID,
-        templateID,
-        {
-          to_email: emailAddress,
+      const recipientParams = {
+        to_email: emailAddress,
+        reply_to: emailAddress,
+        when: answers.when,
+        time: answers.time,
+        activity: answers.activity,
+        where: answers.where,
+      };
+      console.log("[email-debug] sending to recipient:", emailAddress, recipientParams);
+      await emailjs.send(serviceID, templateID, recipientParams, publicKey);
+
+      // also send a copy to the owner's personal email for records
+      const ownerEmail = "zoletaarvin661@gmail.com";  
+      try {
+        const ownerParams = {
+          to_email: ownerEmail,
           reply_to: emailAddress,
           when: answers.when,
           time: answers.time,
           activity: answers.activity,
           where: answers.where,
-        },
-        { publicKey },
-      );
-
-      // also send a copy to the owner's personal email for records
-      const ownerEmail = "zoletaarvin661@gmail.com";
-      try {
-        await emailjs.send(
-          serviceID,
-          templateID,
-          {
-            to_email: ownerEmail,
-            reply_to: emailAddress,
-            when: answers.when,
-            time: answers.time,
-            activity: answers.activity,
-            where: answers.where,
-          },
-          { publicKey },
-        );
+        };
+        console.log("[email-debug] sending owner copy to:", ownerEmail, ownerParams);
+        await emailjs.send(serviceID, templateID, ownerParams, publicKey);
 
         setEmailState("success");
-        setEmailMessage("Confirmation email sent (and a copy was saved).");
+        setEmailMessage("check mo email mo or spam :))");
       } catch (ownerErr) {
         setEmailState("success");
         setEmailMessage(
           "Confirmation sent to recipient, but failed to save a copy to owner email.",
         );
       }
-    } catch {
+    } catch (err: any) {
+      console.error("[email-debug] send error:", err);
       setEmailState("error");
-      setEmailMessage("Unable to send the confirmation email.");
+      setEmailMessage(
+        err?.message || "Unable to send the confirmation email.",
+      );
     }
   };
 
@@ -387,8 +384,7 @@ export default function Home() {
           <p className="flow-progress">Final step</p>
           <h2 className="flow-question">Send a confirmation email</h2>
           <p className="flow-copy">
-            Enter your email address and I’ll send the date confirmation with
-            the details you chose.
+            Enter your email address, bab
           </p>
           <div className="email-input-group">
             <input
