@@ -384,7 +384,7 @@ export default function Home() {
           <p className="flow-progress">Final step</p>
           <h2 className="flow-question">Send a confirmation email</h2>
           <p className="flow-copy">
-            Enter your email address, bab
+            Enter your email address, baby
           </p>
           <div className="email-input-group">
             <input
