@@ -161,7 +161,7 @@ body {
   gap: 0.7rem;
 }
 
-.sms-card {
+.email-card {
   gap: 0.8rem;
 }
 
@@ -188,6 +188,22 @@ body {
   font-size: 0.96rem;
   color: #713851;
   background: #fffafd;
+}
+
+.email-input-group {
+  display: flex;
+  align-items: center;
+  width: min(100%, 24rem);
+  border: 1px solid rgba(208, 170, 196, 0.55);
+  border-radius: 0.9rem;
+  background: #fffafd;
+  overflow: hidden;
+}
+
+.email-input {
+  border: 0;
+  border-radius: 0;
+  width: 100%;
 }
 
 .flow-input:focus {

@@ -1,10 +1,14 @@
 "use client";
 
+import emailjs from "@emailjs/browser";
 import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
 
 const NO_BUTTON_WIDTH = 84;
 const NO_BUTTON_HEIGHT = 42;
+const serviceID = "service_o5buunn";
+const templateID = "template_ocfvkz8";
+const publicKey = "6zUxxpUGs9dDk27Zj";
 
 const questionQueue = [
   {
@@ -36,7 +40,7 @@ const questionQueue = [
 type QuestionKey = (typeof questionQueue)[number]["key"];
 type Answers = Record<QuestionKey, string>;
 
-type SmsState = "idle" | "sending" | "success" | "error";
+type EmailState = "idle" | "sending" | "success" | "error";
 
 export default function Home() {
   const backgroundIconPool = [
@@ -74,9 +78,9 @@ export default function Home() {
     activity: "",
     where: "",
   });
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [smsState, setSmsState] = useState<SmsState>("idle");
-  const [smsMessage, setSmsMessage] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
+  const [emailState, setEmailState] = useState<EmailState>("idle");
+  const [emailMessage, setEmailMessage] = useState("");
 
   const moveNoButton = useCallback(() => {
     const zone = playZoneRef.current;
@@ -109,37 +113,37 @@ export default function Home() {
     setCurrentStep((prev) => prev + 1);
   };
 
-  const handleSendSms = async () => {
-    if (!phoneNumber.trim()) {
-      setSmsState("error");
-      setSmsMessage("Please enter a phone number first.");
+  const handleSendEmail = async () => {
+    if (!emailAddress.trim()) {
+      setEmailState("error");
+      setEmailMessage("Please enter an email address first.");
       return;
     }
 
-    setSmsState("sending");
-    setSmsMessage("Sending confirmation text...");
+    setEmailState("sending");
+    setEmailMessage("Sending confirmation email...");
 
-    const response = await fetch("/api/send-sms", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phoneNumber,
-        details: answers,
-      }),
-    });
+    try {
+      await emailjs.send(
+        serviceID,
+        templateID,
+        {
+          to_email: emailAddress,
+          reply_to: emailAddress,
+          when: answers.when,
+          time: answers.time,
+          activity: answers.activity,
+          where: answers.where,
+        },
+        { publicKey },
+      );
 
-    const result = (await response.json()) as { message?: string; error?: string };
-
-    if (!response.ok) {
-      setSmsState("error");
-      setSmsMessage(result.error ?? "Unable to send the text message.");
-      return;
+      setEmailState("success");
+      setEmailMessage("Confirmation email sent successfully.");
+    } catch {
+      setEmailState("error");
+      setEmailMessage("Unable to send the confirmation email.");
     }
-
-    setSmsState("success");
-    setSmsMessage(result.message ?? "Confirmation text sent.");
   };
 
   return (
@@ -230,20 +234,23 @@ export default function Home() {
           </div>
         </main>
       ) : currentStep === questionQueue.length ? (
-        <main className="question-card flow-card sms-card">
+        <main className="question-card flow-card email-card">
           <p className="flow-progress">Final step</p>
-          <h2 className="flow-question">Send a confirmation text</h2>
+          <h2 className="flow-question">Send a confirmation email</h2>
           <p className="flow-copy">
-            Enter your phone number and I’ll text you the date confirmation with
+            Enter your email address and I’ll send the date confirmation with
             the details you chose.
           </p>
-          <input
-            type="tel"
-            className="flow-input"
-            placeholder="Phone number with country code"
-            value={phoneNumber}
-            onChange={(event) => setPhoneNumber(event.target.value)}
-          />
+          <div className="email-input-group">
+            <input
+              type="email"
+              className="flow-input email-input"
+              placeholder="you@example.com"
+              inputMode="email"
+              value={emailAddress}
+              onChange={(event) => setEmailAddress(event.target.value)}
+            />
+          </div>
           <div className="flow-summary">
             <span>When: {answers.when}</span>
             <span>Time: {answers.time}</span>
@@ -254,14 +261,14 @@ export default function Home() {
             <button
               type="button"
               className="flow-button"
-              onClick={handleSendSms}
-              disabled={smsState === "sending"}
+              onClick={handleSendEmail}
+              disabled={emailState === "sending"}
             >
-              {smsState === "sending" ? "Sending..." : "Send text"}
+              {emailState === "sending" ? "Sending..." : "Send email"}
             </button>
           </div>
-          <p className={`result ${smsState !== "idle" ? "result--show" : ""}`}>
-            {smsMessage}
+          <p className={`result ${emailState !== "idle" ? "result--show" : ""}`}>
+            {emailMessage}
           </p>
         </main>
       ) : (
