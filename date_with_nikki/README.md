@@ -1,8 +1,4 @@
-# Date Invitation
-
-A mobile-friendly date invitation app with a playful background, a moving `No` button, a questionnaire flow, and EmailJS confirmation.
-
-## Run locally
+# Run locally
 
 ```powershell
 npm install
