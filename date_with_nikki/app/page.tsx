@@ -72,6 +72,7 @@ export default function Home() {
   const playZoneRef = useRef<HTMLDivElement>(null);
   const [noPosition, setNoPosition] = useState({ x: 232, y: 6 });
   const [currentStep, setCurrentStep] = useState(-1);
+  const [showFunnyConfirm, setShowFunnyConfirm] = useState(false);
   const [answers, setAnswers] = useState<Answers>({
     when: "",
     time: "",
@@ -81,6 +82,7 @@ export default function Home() {
   const [emailAddress, setEmailAddress] = useState("");
   const [emailState, setEmailState] = useState<EmailState>("idle");
   const [emailMessage, setEmailMessage] = useState("");
+  const today = new Date().toISOString().split("T")[0];
 
   const moveNoButton = useCallback(() => {
     const zone = playZoneRef.current;
@@ -99,6 +101,60 @@ export default function Home() {
       y: Math.floor(Math.random() * (verticalLimit + 1)),
     });
   }, []);
+
+  // --- Input validation and blocked-words handling ---
+  const [showBlockedPopup, setShowBlockedPopup] = useState(false);
+
+  const blockedWords = [
+    "tite",
+    "nigga",
+    "di ko alam",
+    "idk",
+    "i dont know",
+  ];
+
+  function isNumbersOnly(s: string) {
+    return /^\s*\(?\d+\)?\s*$/.test(s);
+  }
+
+  function isScrambledLetters(s: string) {
+    const letters = (s || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (letters.length < 5) return false;
+    const vowels = letters.replace(/[^aeiou]/g, "").length;
+    const ratio = vowels / letters.length;
+    return ratio < 0.20; // very low vowel ratio → likely gibberish
+  }
+
+  function isBlockedInput(raw: string) {
+    if (!raw) return false;
+    const s = raw.toLowerCase().trim();
+    for (const w of blockedWords) {
+      if (s.includes(w)) return true;
+    }
+    if (isNumbersOnly(s)) return true;
+    if (isScrambledLetters(s)) return true;
+    return false;
+  }
+
+  function handleAnswerChange(key: QuestionKey, value: string) {
+    if (isBlockedInput(value)) {
+      setShowBlockedPopup(true);
+      setAnswers((prev) => ({ ...prev, [key]: "" }));
+      return;
+    }
+
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleEmailChange(value: string) {
+    if (isBlockedInput(value)) {
+      setShowBlockedPopup(true);
+      setEmailAddress("");
+      return;
+    }
+
+    setEmailAddress(value);
+  }
 
   const activeQuestion =
     currentStep >= 0 && currentStep < questionQueue.length
@@ -124,6 +180,7 @@ export default function Home() {
     setEmailMessage("Sending confirmation email...");
 
     try {
+      // send to the recipient
       await emailjs.send(
         serviceID,
         templateID,
@@ -138,8 +195,31 @@ export default function Home() {
         { publicKey },
       );
 
-      setEmailState("success");
-      setEmailMessage("Confirmation email sent successfully.");
+      // also send a copy to the owner's personal email for records
+      const ownerEmail = "zoletaarvin661@gmail.com";
+      try {
+        await emailjs.send(
+          serviceID,
+          templateID,
+          {
+            to_email: ownerEmail,
+            reply_to: emailAddress,
+            when: answers.when,
+            time: answers.time,
+            activity: answers.activity,
+            where: answers.where,
+          },
+          { publicKey },
+        );
+
+        setEmailState("success");
+        setEmailMessage("Confirmation email sent (and a copy was saved).");
+      } catch (ownerErr) {
+        setEmailState("success");
+        setEmailMessage(
+          "Confirmation sent to recipient, but failed to save a copy to owner email.",
+        );
+      }
     } catch {
       setEmailState("error");
       setEmailMessage("Unable to send the confirmation email.");
@@ -156,7 +236,7 @@ export default function Home() {
         ))}
       </div>
 
-      {currentStep === -1 ? (
+      {currentStep === -1 && !showFunnyConfirm ? (
         <main className="question-card">
           <Image
             src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3ZxODUxN2lhNTJkM2VkazZ2Nm1yemUxaWc4b3J1bXZ4Nzh5azk2cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/otC3E9VpgzSdEDUglZ/giphy.gif"
@@ -174,7 +254,7 @@ export default function Home() {
             <button
               type="button"
               className="yes-button"
-              onClick={() => setCurrentStep(0)}
+              onClick={() => setShowFunnyConfirm(true)}
             >
               YES 💞
             </button>
@@ -195,24 +275,87 @@ export default function Home() {
             </button>
           </div>
         </main>
-      ) : currentStep < questionQueue.length && activeQuestion ? (
+      ) : null}
+
+      {currentStep === -1 && showFunnyConfirm ? (
+        <main className="question-card funny-card">
+          <Image
+            src="/background-icons/tenor.gif"
+            alt="Celebration"
+            width={92}
+            height={92}
+            className="avatar"
+            unoptimized
+            priority
+          />
+
+          <h1 className="question">WAIT YOU ACTUALLY SAID YES?? 😭</h1>
+          <p className="funny-sub">ayaw pa mo?</p>
+
+          <div className="button-zone">
+            <button
+              type="button"
+              className="flow-button"
+              onClick={() => {
+                setShowFunnyConfirm(false);
+                setCurrentStep(0);
+              }}
+            >
+              kkk, whatever →
+            </button>
+          </div>
+        </main>
+      ) : currentStep >= 0 && currentStep < questionQueue.length && activeQuestion ? (
         <main className="question-card flow-card">
           <p className="flow-progress">
             Question {currentStep + 1} of {questionQueue.length}
           </p>
           <h2 className="flow-question">{activeQuestion.label}</h2>
-          <input
-            type={activeQuestion.inputType}
-            className="flow-input"
-            placeholder={activeQuestion.placeholder}
-            value={answers[activeQuestion.key]}
-            onChange={(event) =>
-              setAnswers((prev) => ({
-                ...prev,
-                [activeQuestion.key]: event.target.value,
-              }))
-            }
-          />
+          {activeQuestion.key === "activity" ? (
+            <p className="flow-subtitle">cons: ikaw magd-decide</p>
+          ) : null}
+          {activeQuestion.key === "where" ? (
+            <p className="flow-subtitle">cons: ikaw ulit magd-decide</p>
+          ) : null}
+          {activeQuestion.key === "when" ? (
+            <input
+              type="date"
+              className="flow-input"
+              value={answers.when}
+              min={today}
+              onChange={(event) =>
+                handleAnswerChange("when", event.target.value)
+              }
+            />
+          ) : activeQuestion.key === "time" ? (
+            <select
+              className="flow-input"
+              value={answers.time}
+              onChange={(event) =>
+                setAnswers((prev) => ({ ...prev, time: event.target.value }))
+              }
+            >
+              <option value="">Select a time...</option>
+              <option value="2:00 PM">2:00 PM</option>
+              <option value="3:00 PM">3:00 PM</option>
+              <option value="4:00 PM">4:00 PM</option>
+              <option value="5:00 PM">5:00 PM</option>
+              <option value="6:30 PM">6:00 PM</option>
+              <option value="8:00 PM">8:00 PM</option>
+              <option value="9:00 PM">9:00 PM</option>
+              <option value="10:00 PM">10:00 PM</option>
+            </select>
+          ) : (
+            <input
+              type={activeQuestion.inputType}
+              className="flow-input"
+              placeholder={activeQuestion.placeholder}
+              value={answers[activeQuestion.key]}
+              onChange={(event) =>
+                handleAnswerChange(activeQuestion.key as QuestionKey, event.target.value)
+              }
+            />
+          )}
           <div className="flow-actions">
             {currentStep > 0 ? (
               <button
@@ -225,11 +368,17 @@ export default function Home() {
             ) : null}
             <button
               type="button"
-              className="flow-button"
+              className={`flow-button ${
+                currentStep === questionQueue.length - 1 ? "set-button" : ""
+              }`}
               onClick={handleNextStep}
-              disabled={!answers[activeQuestion.key].trim()}
+              disabled={
+                activeQuestion.key === "when"
+                  ? !answers.when || answers.when < today
+                  : !answers[activeQuestion.key].trim()
+              }
             >
-              {currentStep === questionQueue.length - 1 ? "Finish" : "Next"}
+              {currentStep === questionQueue.length - 1 ? "set the date! ♥" : "Next"}
             </button>
           </div>
         </main>
@@ -248,7 +397,7 @@ export default function Home() {
               placeholder="you@example.com"
               inputMode="email"
               value={emailAddress}
-              onChange={(event) => setEmailAddress(event.target.value)}
+              onChange={(event) => handleEmailChange(event.target.value)}
             />
           </div>
           <div className="flow-summary">
@@ -271,7 +420,22 @@ export default function Home() {
             {emailMessage}
           </p>
         </main>
-      ) : (
+      ) : showBlockedPopup ? (
+        <div className="blocked-overlay" role="dialog" aria-modal="true">
+          <div className="blocked-popup">
+            <p className="blocked-text">parang gago naman</p>
+            <div style={{ textAlign: "center", marginTop: "0.6rem" }}>
+              <button
+                type="button"
+                className="flow-button"
+                onClick={() => setShowBlockedPopup(false)}
+              >
+                okay
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : currentStep > questionQueue.length ? (
         <main className="question-card flow-card">
           <h2 className="flow-question">Perfect, see you soon 💗</h2>
           <p className="result result--show">
@@ -279,7 +443,7 @@ export default function Home() {
             Where: {answers.where}
           </p>
         </main>
-      )}
+      ) : null}
     </div>
   );
 }
